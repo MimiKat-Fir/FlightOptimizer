@@ -12,6 +12,7 @@ from typing import Iterable
 
 import typer
 from rich.console import Console
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.table import Table
 
 
@@ -236,34 +237,48 @@ def scan(
     total_queries = len(origin_codes) * len(destination_codes) * len(depart_dates) * len(return_dates)
 
     console.print(f"Running {total_queries} Fli queries...")
-    for origin in origin_codes:
-        for destination in destination_codes:
-            for depart_date in depart_dates:
-                for return_date in return_dates:
-                    try:
-                        payload = run_fli(
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("{task.completed}/{task.total}"),
+        TimeElapsedColumn(),
+        TimeRemainingColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Starting", total=total_queries)
+        for origin in origin_codes:
+            for destination in destination_codes:
+                for depart_date in depart_dates:
+                    for return_date in return_dates:
+                        label = f"{origin}-{destination} {depart_date}/{return_date}"
+                        progress.update(task, description=label)
+                        try:
+                            payload = run_fli(
+                                origin,
+                                destination,
+                                depart_date,
+                                return_date,
+                                stops,
+                                timeout_seconds,
+                                use_cache,
+                            )
+                        except Exception as exc:
+                            progress.console.print(f"[yellow]Skipped {label}: {exc}[/yellow]")
+                            progress.advance(task)
+                            continue
+                        rows = rows_from_payload(
                             origin,
                             destination,
                             depart_date,
                             return_date,
-                            stops,
-                            timeout_seconds,
-                            use_cache,
+                            payload,
+                            limit_per_query,
                         )
-                    except Exception as exc:
-                        console.print(f"[yellow]Skipped {origin}-{destination} {depart_date}/{return_date}: {exc}[/yellow]")
-                        continue
-                    rows = rows_from_payload(
-                        origin,
-                        destination,
-                        depart_date,
-                        return_date,
-                        payload,
-                        limit_per_query,
-                    )
-                    all_rows.extend(rows)
-                    all_rows.sort(key=lambda row: (row.estimated_total_eur, row.duration_hours))
-                    write_csv(all_rows, output)
+                        all_rows.extend(rows)
+                        all_rows.sort(key=lambda row: (row.estimated_total_eur, row.duration_hours))
+                        write_csv(all_rows, output)
+                        progress.advance(task)
 
     all_rows.sort(key=lambda row: (row.estimated_total_eur, row.duration_hours))
     write_csv(all_rows, output)
