@@ -21,21 +21,19 @@ conda install -c conda-forge spyder-kernels
 
 ```powershell
 conda activate flights
-python .\flight_optimizer.py `
-  --origins MAD,BCN `
-  --destinations PVG,HGH `
-  --depart 2026-07-08:2026-07-10 `
-  --return 2026-07-30:2026-07-31 `
-  --limit-per-query 3
+python .\flight_optimizer.py --origins MAD,VLC,BCN --destinations PVG,HGH --return-origins MAD,VLC,BCN --depart 2026-07-09:2026-07-12 --return 2026-07-27:2026-07-28 --limit-per-query 1 --output data/china_full_baseline.csv
 ```
 
-Results are written to `data/results.csv`.
+Results are written to the path passed in `--output` (`data/results.csv` by default).
 
 ## Notes
 
 - Prices can change and must be verified before purchase.
 - `PVG`, `SHA`, and `NKG` include a rough transfer estimate to Hangzhou.
-- This first version searches normal round trips. Open-jaw/multi-city support is the next logical step.
+- The scanner queries one-way outbound and one-way return flights, then combines them internally.
+- `--return-origins` enables open-jaw shapes such as `MAD -> PVG -> VLC`.
+- `MAD` and `BCN` include a rough Valencia train penalty by default; `VLC` is zero.
+- Departures before `--free-arrival-date` add a cheap-hotel penalty.
 
 ## Spyder
 
