@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Iterable
 
 import typer
+import airportsdata
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.table import Table
@@ -18,6 +19,7 @@ from rich.table import Table
 
 app = typer.Typer(help="Scan flight/date matrices using Fli.")
 console = Console()
+AIRPORTS_BY_IATA = airportsdata.load("IATA")
 
 
 DESTINATION_EXTRAS_EUR = {
@@ -59,6 +61,14 @@ def parse_date_range(value: str) -> list[str]:
 
 def split_codes(value: str) -> list[str]:
     return [code.strip().upper() for code in value.split(",") if code.strip()]
+
+
+def validate_airport_codes(codes: Iterable[str]) -> None:
+    invalid = [code for code in codes if code not in AIRPORTS_BY_IATA]
+    if invalid:
+        code_list = ", ".join(invalid)
+        console.print(f"[red]{code_list} airport does not exist, review the configuration and try again.[/red]")
+        raise typer.Exit(code=1)
 
 
 def fli_executable() -> Path:
@@ -232,6 +242,7 @@ def scan(
     all_rows: list[SearchRow] = []
     origin_codes = split_codes(origins)
     destination_codes = split_codes(destinations)
+    validate_airport_codes(origin_codes + destination_codes)
     depart_dates = parse_date_range(depart)
     return_dates = parse_date_range(return_)
     total_queries = len(origin_codes) * len(destination_codes) * len(depart_dates) * len(return_dates)
