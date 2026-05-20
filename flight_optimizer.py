@@ -62,9 +62,14 @@ def split_codes(value: str) -> list[str]:
 
 def fli_executable() -> Path:
     script_dir = Path(__file__).resolve().parent
-    env_candidate = Path(sys.executable).resolve().parent / "fli.exe"
-    if env_candidate.exists():
-        return env_candidate
+    env_dir = Path(sys.executable).resolve().parent
+    for env_candidate in (
+        env_dir / "fli.exe",
+        env_dir / "Scripts" / "fli.exe",
+        env_dir.parent / "Scripts" / "fli.exe",
+    ):
+        if env_candidate.exists():
+            return env_candidate
     candidate = script_dir / ".venv" / "Scripts" / "fli.exe"
     if candidate.exists():
         return candidate
