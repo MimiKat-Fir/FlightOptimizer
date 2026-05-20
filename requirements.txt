@@ -1,0 +1,6 @@
+flights==0.8.5
+numpy
+pandas
+pydantic
+rich
+typer
